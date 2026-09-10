@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image to PDF</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+    <main class="container">
+
+        <h1>Image to PDF</h1>
+        <p class="subtitle">Convert your images into a PDF</p>
+
+        <form action="/convert" method="POST" enctype="multipart/form-data">
+
+            <label class="upload-box">
+                <span class="upload-icon">📁</span>
+                <strong>Select Images</strong>
+                <small>JPG, PNG or WEBP</small>
+                <input type="file" name="images" id="images"
+                       accept="image/*" multiple>
+            </label>
+
+            <div id="preview"></div>
+
+            <button type="submit" id="convertBtn">
+                Convert to PDF
+            </button>
+
+        </form>
+
+        <p class="footer">Simple • Free • No signup</p>
+
+    </main>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+</body>
+</html>
