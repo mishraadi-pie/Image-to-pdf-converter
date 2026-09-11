@@ -1,15 +1,21 @@
-const input = document.getElementById("images");
-const preview = document.getElementById("preview");
-
-input.addEventListener("change", function () {
-    preview.innerHTML = "";
-
-    for (const file of input.files) {
-        const img = document.createElement("img");
-
-        img.src = URL.createObjectURL(file);
-        img.className = "preview-image";
-
-        preview.appendChild(img);
-    }
-});
+const input=document.getElementById("images"),grid=document.getElementById("grid"),empty=document.getElementById("empty"),count=document.getElementById("count"),size=document.getElementById("size"),drop=document.getElementById("dropzone"),form=document.getElementById("pdfForm"),status=document.getElementById("status"),btn=document.getElementById("convertBtn");
+let items=[],editIndex=-1,dragIndex=-1;
+const $=s=>document.querySelector(s);
+function bytes(n){if(n<1024)return n+" B";if(n<1048576)return (n/1024).toFixed(1)+" KB";return (n/1048576).toFixed(1)+" MB"}
+function addFiles(files){for(const f of files){if(!f.type.startsWith("image/"))continue;items.push({file:f,src:URL.createObjectURL(f),rotation:0,flipH:false,flipV:false,gray:false,brightness:100,contrast:100});}render();}
+input.onchange=e=>{addFiles(e.target.files);input.value="";}
+drop.ondragover=e=>{e.preventDefault();drop.classList.add("drag")};drop.ondragleave=()=>drop.classList.remove("drag");drop.ondrop=e=>{e.preventDefault();drop.classList.remove("drag");addFiles(e.dataTransfer.files)};
+function render(){grid.innerHTML="";empty.style.display=items.length?"none":"block";count.textContent=items.length+" image"+(items.length===1?"":"s");size.textContent=bytes(items.reduce((a,x)=>a+x.file.size,0));
+items.forEach((it,i)=>{const d=document.createElement("div");d.className="item";d.draggable=true;d.dataset.i=i;d.innerHTML=`<span class="num">${i+1}</span><img class="thumb"><div class="itemBtns"><button type="button" data-e="${i}">Edit</button><button type="button" data-r="${i}">↻</button><button type="button" data-x="${i}">Remove</button></div>`;const im=d.querySelector("img");im.src=it.src;im.style.transform=`rotate(${it.rotation}deg) scaleX(${it.flipH?-1:1}) scaleY(${it.flipV?-1:1})`;im.style.filter=`grayscale(${it.gray?1:0}) brightness(${it.brightness}%) contrast(${it.contrast}%)`;grid.appendChild(d);d.ondragstart=()=>dragIndex=i;d.ondragover=e=>e.preventDefault();d.ondrop=()=>{const [m]=items.splice(dragIndex,1);items.splice(i,0,m);render();};});}
+grid.onclick=e=>{const ed=e.target.dataset.e,ro=e.target.dataset.r,x=e.target.dataset.x;if(ed!==undefined)openEditor(+ed);if(ro!==undefined){items[+ro].rotation=(items[+ro].rotation+90)%360;render();}if(x!==undefined){URL.revokeObjectURL(items[+x].src);items.splice(+x,1);render();}};
+$("#clearAll").onclick=()=>{items.forEach(x=>URL.revokeObjectURL(x.src));items=[];render()};
+const editor=$("#editor"),editImg=$("#editImage"),bright=$("#brightness"),contrast=$("#contrast");let draft=null;
+function openEditor(i){editIndex=i;draft=structuredClone(items[i]);editImg.src=items[i].src;bright.value=draft.brightness;contrast.value=draft.contrast;editor.classList.remove("hidden");updateEditor();}
+function updateEditor(){editImg.style.transform=`rotate(${draft.rotation}deg) scaleX(${draft.flipH?-1:1}) scaleY(${draft.flipV?-1:1})`;editImg.style.filter=`grayscale(${draft.gray?1:0}) brightness(${draft.brightness}%) contrast(${draft.contrast}%)`;}
+document.querySelectorAll(".tools button").forEach(b=>b.onclick=()=>{const a=b.dataset.act;if(a==="rotL")draft.rotation=(draft.rotation+270)%360;if(a==="flipH")draft.flipH=!draft.flipH;if(a==="flipV")draft.flipV=!draft.flipV;if(a==="gray")draft.gray=!draft.gray;if(a==="reset")draft={...items[editIndex],rotation:0,flipH:false,flipV:false,gray:false,brightness:100,contrast:100};updateEditor();});
+bright.oninput=()=>{draft.brightness=+bright.value;updateEditor()};contrast.oninput=()=>{draft.contrast=+contrast.value;updateEditor()};
+$("#closeEditor").onclick=()=>editor.classList.add("hidden");
+$("#saveEdit").onclick=()=>{items[editIndex]={...items[editIndex],...draft};editor.classList.add("hidden");render()};
+async function imageToData(item){return new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>{const rot=item.rotation%360,sw=(rot===90||rot===270)?im.height:im.width,sh=(rot===90||rot===270)?im.width:im.height,max=1800,scale=Math.min(1,max/Math.max(sw,sh)),c=document.createElement("canvas");c.width=Math.max(1,Math.round(sw*scale));c.height=Math.max(1,Math.round(sh*scale));const ctx=c.getContext("2d");ctx.translate(c.width/2,c.height/2);ctx.rotate(rot*Math.PI/180);ctx.scale(item.flipH?-1:1,item.flipV?-1:1);ctx.filter=`grayscale(${item.gray?1:0}) brightness(${item.brightness}%) contrast(${item.contrast}%)`;ctx.drawImage(im,-im.width*scale/2,-im.height*scale/2,im.width*scale,im.height*scale);resolve(c.toDataURL("image/jpeg",.78));};im.onerror=reject;im.src=item.src;});}
+form.onsubmit=async e=>{e.preventDefault();if(!items.length){status.textContent="Please add at least one image.";return;}btn.disabled=true;status.textContent="Preparing edited images…";try{const fd=new FormData(form);fd.delete("images");for(const it of items)fd.append("images",await imageToData(it));status.textContent="Creating PDF…";const res=await fetch("/convert",{method:"POST",body:fd});if(!res.ok){const j=await res.json().catch(()=>({}));throw Error(j.error||"Conversion failed");}const blob=await res.blob();const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=fd.get("filename")||"images.pdf";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);status.textContent="PDF created successfully ✓";}catch(err){status.textContent="Error: "+err.message;}finally{btn.disabled=false;}};
+render();

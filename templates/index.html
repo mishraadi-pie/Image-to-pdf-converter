@@ -1,42 +1,80 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image to PDF</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Image to PDF — V2</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-
 <body>
+<div class="app">
+<header>
+  <div><h1>Image to PDF</h1><p>Turn photos and documents into a clean PDF.</p></div>
+  <button class="ghost" id="clearAll" type="button">Clear all</button>
+</header>
 
-    <main class="container">
+<form id="pdfForm" method="post" action="/convert">
+<section class="upload card">
+  <label class="dropzone" id="dropzone">
+    <div class="uploadIcon">＋</div>
+    <strong>Add images</strong>
+    <span>JPG, PNG, WEBP • multiple files</span>
+    <input id="images" type="file" accept="image/*" multiple>
+  </label>
+  <div class="stats"><span id="count">0 images</span><span id="size">0 KB</span></div>
+</section>
 
-        <h1>Image to PDF</h1>
-        <p class="subtitle">Convert your images into a PDF</p>
+<section class="card">
+  <div class="sectionTitle"><h2>Pages</h2><span class="hint">Drag to reorder</span></div>
+  <div id="empty" class="empty">Your selected images will appear here.</div>
+  <div id="grid" class="grid"></div>
+</section>
 
-        <form action="/convert" method="POST" enctype="multipart/form-data">
+<section class="card">
+  <div class="sectionTitle"><h2>PDF settings</h2></div>
+  <div class="fields">
+    <label>Page size<select name="page_size"><option>A4</option><option>A3</option><option>Letter</option><option>Legal</option></select></label>
+    <label>Orientation<select name="orientation"><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select></label>
+    <label>Layout<select name="per_page"><option value="1">1 image / page</option><option value="2">2 images / page</option><option value="4">4 images / page</option></select></label>
+    <label>Image fit<select name="fit_mode"><option value="fit">Fit — show whole image</option><option value="fill">Fill — cover page area</option><option value="original">Original — don't upscale</option></select></label>
+    <label>Margin <span class="inline"><input name="margin" type="number" value="30" min="0" max="150"> pt</span></label>
+    <label>Quality<select name="quality"><option value="low">Low — smaller PDF</option><option value="medium" selected>Medium — balanced</option><option value="high">High — better quality</option></select></label>
+  </div>
+</section>
 
-            <label class="upload-box">
-                <span class="upload-icon">📁</span>
-                <strong>Select Images</strong>
-                <small>JPG, PNG or WEBP</small>
-                <input type="file" name="images" id="images"
-                       accept="image/*" multiple>
-            </label>
+<section class="card">
+  <div class="sectionTitle"><h2>Document</h2></div>
+  <div class="fields">
+    <label>PDF filename<input name="filename" value="images.pdf"></label>
+    <label>Document title<input name="title" placeholder="Optional"></label>
+    <label>Header<input name="header" placeholder="Optional"></label>
+    <label>Footer<input name="footer" placeholder="Optional"></label>
+    <label>Watermark<input name="watermark" placeholder="Optional"></label>
+    <label>Password <span class="inline"><input name="password" type="password" placeholder="Optional"></span></label>
+  </div>
+  <label class="check"><input name="page_numbers" type="checkbox" value="1" checked> Add page numbers</label>
+</section>
 
-            <div id="preview"></div>
+<button class="convert" id="convertBtn" type="submit">Convert to PDF</button>
+<div id="status" class="status"></div>
+</form>
+</div>
 
-            <button type="submit" id="convertBtn">
-                Convert to PDF
-            </button>
-
-        </form>
-
-        <p class="footer">Simple • Free • No signup</p>
-
-    </main>
-
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
-
+<div id="editor" class="modal hidden">
+  <div class="modalBox">
+    <div class="modalHead"><h2>Edit image</h2><button id="closeEditor" type="button">×</button></div>
+    <div class="editPreview"><img id="editImage"></div>
+    <div class="tools">
+      <button type="button" data-act="rotL">↶ Rotate</button><button type="button" data-act="flipH">↔ Flip H</button><button type="button" data-act="flipV">↕ Flip V</button>
+      <button type="button" data-act="gray">Grayscale</button><button type="button" data-act="reset">Reset</button>
+    </div>
+    <div class="sliders">
+      <label>Brightness <input id="brightness" type="range" min="50" max="150" value="100"></label>
+      <label>Contrast <input id="contrast" type="range" min="50" max="150" value="100"></label>
+    </div>
+    <div class="modalActions"><button id="saveEdit" class="convert" type="button">Apply changes</button></div>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
